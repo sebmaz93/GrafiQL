@@ -7,7 +7,6 @@ const {
 	GraphQLList,
 	GraphQLNonNull
 } = graphql;
-// const _ = require('lodash');
 const axios = require('axios');
 
 // Declaring the Schema Type
@@ -59,8 +58,6 @@ const RootQuery = new GraphQLObjectType({
 			//give ID will give back the user from UserType
 			// resolve func goes to db and grab the data
 			resolve(parentValue, args) {
-				// return _.find(users, { id: args.id });
-				// _ go through all users and give 1st user with the ID
 				return axios
 					.get(`http://localhost:3000/users/${args.id}`)
 					.then(res => res.data); // because axios returns { data :{ firstName:....}}
@@ -79,7 +76,54 @@ const RootQuery = new GraphQLObjectType({
 	}
 });
 
+// Root Mutation ( add, edit, remove ) data
+const Mutation = new GraphQLObjectType({
+	name: 'Mutation',
+	fields: {
+		addUser: {
+			type: UserType, // the type that will return from this func
+			args: {
+				// the args that will pass to this func
+				firstName: { type: new GraphQLNonNull(GraphQLString) }, // NonNull = must set Value
+				age: { type: new GraphQLNonNull(GraphQLInt) },
+				companyId: { type: GraphQLString }
+			},
+			resolve(parentValue, { firstName, age }) {
+				return axios
+					.post(`http://localhost:3000/users`, { firstName, age }) // {args} 2nd argument as BODY
+					.then(res => res.data);
+			}
+		},
+		deleteUser: {
+			type: UserType,
+			args: {
+				id: { type: new GraphQLNonNull(GraphQLString) }
+			},
+			resolve(parentValue, { id }) {
+				return axios
+					.delete(`http://localhost:3000/users/${id}`)
+					.then(res => res.data);
+			}
+		},
+		editUser: {
+			type: UserType,
+			args: {
+				id: { type: new GraphQLNonNull(GraphQLString) },
+				firstName: { type: GraphQLString },
+				age: { type: GraphQLString },
+				companyId: { type: GraphQLString }
+			},
+			resolve(parentValue, args) {
+				return axios
+					.patch(`http://localhost:3000/users/${args.id}`, args)
+					.then(res => res.data);
+			}
+		}
+	}
+});
+
 // Declare GQL schema and the RootQuery
 module.exports = new GraphQLSchema({
-	query: RootQuery
+	query: RootQuery,
+	mutation: Mutation
 });
