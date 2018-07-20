@@ -9,14 +9,17 @@ const {
 } = graphql;
 const axios = require('axios');
 
+// Declaring the Schema Type
 const CompanyType = new GraphQLObjectType({
-	name: 'Company',
+	name: 'Company', // Each Type MUST have Name and Fields
+	// wrap fields in Arrow Function , to not execute before UserType declares (JS closure)
 	fields: () => ({
-		id: { type: GraphQLString },
+		id: { type: GraphQLString }, // Each Field has Type:
 		name: { type: GraphQLString },
 		description: { type: GraphQLString },
 		users: {
-			type: new GraphQLList(UserType),
+			type: new GraphQLList(UserType), // GQL-list because will return multiple users (list)
+			// no args: because not going to specify what type of users to return
 			resolve(parentValue, args) {
 				return axios
 					.get(`http://localhost:3000/companies/${parentValue.id}/users`)
@@ -34,6 +37,7 @@ const UserType = new GraphQLObjectType({
 		age: { type: GraphQLInt },
 		company: {
 			type: CompanyType,
+			// Resolve because of Differnce in Real-Data in DB (companyID) and Graph-Type (company)
 			resolve(parentValue, args) {
 				return axios
 					.get(`http://localhost:3000/companies/${parentValue.companyId}`)
@@ -43,18 +47,23 @@ const UserType = new GraphQLObjectType({
 	})
 });
 
+// Declare ROOTQUERY
 const RootQuery = new GraphQLObjectType({
 	name: 'RootQueryType',
 	fields: {
+		// to be able to access User type from RootQuery
 		user: {
 			type: UserType,
-			args: { id: { type: GraphQLString } },
+			args: { id: { type: GraphQLString } }, // required args for user,
+			//give ID will give back the user from UserType
+			// resolve func goes to db and grab the data
 			resolve(parentValue, args) {
 				return axios
 					.get(`http://localhost:3000/users/${args.id}`)
-					.then(res => res.data);
+					.then(res => res.data); // because axios returns { data :{ firstName:....}}
 			}
 		},
+		// to be able to access Company type from RootQuery
 		company: {
 			type: CompanyType,
 			args: { id: { type: GraphQLString } },
@@ -67,23 +76,25 @@ const RootQuery = new GraphQLObjectType({
 	}
 });
 
-const mutation = new GraphQLObjectType({
+// Root Mutation ( add, edit, remove ) data
+const Mutation = new GraphQLObjectType({
 	name: 'Mutation',
 	fields: {
 		addUser: {
-			type: UserType,
+			type: UserType, // the type that will return from this func
 			args: {
-				firstName: { type: new GraphQLNonNull(GraphQLString) },
+				// the args that will pass to this func
+				firstName: { type: new GraphQLNonNull(GraphQLString) }, // NonNull = must set Value
 				age: { type: new GraphQLNonNull(GraphQLInt) },
 				companyId: { type: GraphQLString }
 			},
 			resolve(parentValue, { firstName, age }) {
 				return axios
-					.post(`http://localhost:3000/users`, { firstName, age })
+					.post(`http://localhost:3000/users`, { firstName, age }) // {args} 2nd argument as BODY
 					.then(res => res.data);
 			}
 		},
-		delUser: {
+		deleteUser: {
 			type: UserType,
 			args: {
 				id: { type: new GraphQLNonNull(GraphQLString) }
@@ -99,23 +110,20 @@ const mutation = new GraphQLObjectType({
 			args: {
 				id: { type: new GraphQLNonNull(GraphQLString) },
 				firstName: { type: GraphQLString },
-				age: { type: GraphQLInt },
+				age: { type: GraphQLString },
 				companyId: { type: GraphQLString }
 			},
-			resolve(parentValue, { id, firstName, age, companyId }) {
+			resolve(parentValue, args) {
 				return axios
-					.patch(`http://localhost:3000/users/${id}`, {
-						firstName,
-						age,
-						companyId
-					})
+					.patch(`http://localhost:3000/users/${args.id}`, args)
 					.then(res => res.data);
 			}
 		}
 	}
 });
 
+// Declare GQL schema and the RootQuery
 module.exports = new GraphQLSchema({
 	query: RootQuery,
-	mutation: mutation
+	mutation: Mutation
 });
