@@ -62,3 +62,8 @@ dist/
 stats.json
 .idea
 .idea/
+
+gitig_test/*
+!gitig_test/sec_layer
+gitig_test/sec_layer/*
+!gitig_test/sec_layer/third_layer
